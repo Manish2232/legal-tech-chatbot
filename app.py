@@ -58,12 +58,10 @@ st.markdown(
         }}
         .chat-row.user .chat-text {{
             color: #b9fff0;
-            border-right: 3px solid #22d3a6;
             text-align: right;
         }}
         .chat-row.assistant .chat-text {{
             color: #f2f8ff;
-            border-left: 3px solid #55cfff;
             text-align: left;
         }}
         .credit-box {{
