@@ -455,8 +455,8 @@ st.markdown(
         }}
 
         .chat-text {{
-            font-size: 1.18rem;
-            line-height: 1.8;
+            font-size: 1.3rem;
+            line-height: 1.85;
             overflow-wrap: anywhere;
         }}
 
@@ -482,29 +482,57 @@ st.markdown(
         }}
 
         /* ---------- Popover / action icons ---------- */
-        [data-testid="stPopover"] > button {{
+        [data-testid="stHorizontalBlock"] {{
+            align-items: center !important;
+        }}
+
+        [data-testid="stHorizontalBlock"] [data-testid="stColumn"] {{
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }}
+
+        [data-testid="stHorizontalBlock"] [data-testid="stColumn"] [data-testid="stElementContainer"],
+        [data-testid="stHorizontalBlock"] [data-testid="stColumn"] [data-testid="element-container"] {{
+            margin: 0 !important;
+        }}
+
+        [data-testid="stHorizontalBlock"] iframe {{
+            display: block !important;
+        }}
+
+        [data-testid="stPopover"] {{
+            display: flex !important;
+            align-items: center !important;
+        }}
+
+        [data-testid="stPopover"] > button,
+        [data-testid="stPopover"] button {{
             min-width: 26px !important;
             min-height: 26px !important;
             width: 26px !important;
             height: 26px !important;
             padding: 0 !important;
+            margin: 0 !important;
             background: transparent !important;
-            border: 0 !important;
+            background-color: transparent !important;
+            border: none !important;
             border-radius: 50% !important;
             box-shadow: none !important;
             color: #8fa8c2 !important;
-            font-size: 18px !important;
+            font-size: 15px !important;
             line-height: 1 !important;
             transition: all .15s ease !important;
         }}
 
-        [data-testid="stPopover"] > button:hover {{
+        [data-testid="stPopover"] > button:hover,
+        [data-testid="stPopover"] button:hover {{
             background: rgba(92, 184, 255, .18) !important;
             color: #ffffff !important;
-            transform: scale(1.08);
         }}
 
-        [data-testid="stPopover"] > button svg {{
+        [data-testid="stPopover"] > button svg,
+        [data-testid="stPopover"] button svg {{
             display: none !important;
         }}
 
@@ -776,6 +804,8 @@ if question:
     render_message("assistant", answer)
     st.session_state.messages = get_messages(st.session_state.session_id)
     render_answer_actions(st.session_state.messages[-1])
+
+
 
 
 
