@@ -177,6 +177,17 @@ def render_answer_actions(message: dict[str, str | int]) -> None:
                     st.session_state.messages = get_messages(st.session_state.session_id)
                     st.rerun()
 
+
+def render_user_copy_action(message: dict[str, str | int]) -> None:
+    """Show the copy control below a user message, aligned to the right."""
+    message_id = message.get("id")
+    action_columns = st.columns([0.94, 0.06])
+    with action_columns[1]:
+        render_copy_button(
+            str(message["content"]),
+            int(message_id) if message_id is not None else None,
+        )
+
 with st.sidebar:
     st.markdown(
         """
@@ -247,7 +258,9 @@ st.caption("Ask about a legal topic in plain language. Include your country or s
 
 for message in st.session_state.messages:
     render_message(message["role"], message["content"])
-    if message["role"] == "assistant":
+    if message["role"] == "user":
+        render_user_copy_action(message)
+    else:
         render_answer_actions(message)
 
 question = st.chat_input("For example: What should I check before signing a rental agreement?")
@@ -255,6 +268,7 @@ question = st.chat_input("For example: What should I check before signing a rent
 if question:
     st.session_state.messages.append({"role": "user", "content": question})
     render_message("user", question)
+    render_user_copy_action({"role": "user", "content": question})
 
     with st.spinner("Reviewing your question…"):
         try:
