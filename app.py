@@ -136,6 +136,7 @@ def render_answer_actions(message: dict[str, str | int]) -> None:
     """Show copy, PDF download, and edit controls under a saved answer."""
     content = str(message["content"])
     message_id = message.get("id")
+    action_key = str(message_id) if message_id is not None else "current"
     action_columns = st.columns([0.06, 0.07, 0.87])
     with action_columns[0]:
         render_copy_button(content, int(message_id) if message_id is not None else None)
@@ -146,6 +147,7 @@ def render_answer_actions(message: dict[str, str | int]) -> None:
                 data=create_answer_pdf(content),
                 file_name="lexassist-answer.pdf",
                 mime="application/pdf",
+                key=f"download-answer-{action_key}",
                 use_container_width=True,
             )
             if message_id is not None:
