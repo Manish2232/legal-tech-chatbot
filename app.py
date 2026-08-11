@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import html
 from pathlib import Path
 from uuid import uuid4
 
@@ -34,34 +35,36 @@ st.markdown(
         .stApp {{ {background_css} background-color: #07111f; }}
         [data-testid="stHeader"] {{ background: transparent; }}
         [data-testid="stSidebar"] {{ background: rgba(5, 15, 29, .93); }}
-        [data-testid="stChatMessage"] {{
-            align-items: flex-end;
-            background: transparent !important;
-            border: 0 !important;
-            gap: 0 !important;
-            padding: .35rem 0 !important;
+        .chat-row {{
+            display: flex;
+            width: 100%;
+            margin: 1rem 0;
         }}
-        [data-testid="stChatMessageAvatarUser"],
-        [data-testid="stChatMessageAvatarAssistant"] {{
-            display: none !important;
-        }}
-        [data-testid="stChatMessageContent"] {{
-            width: fit-content;
-            max-width: min(72%, 720px);
-            padding: .75rem 1rem;
-            background: rgba(9, 38, 63, .94);
-            border: 1px solid rgba(112, 195, 255, .24);
-            border-radius: 4px 18px 18px 18px;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
-        }}
-        [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {{
+        .chat-row.user {{
             justify-content: flex-end;
         }}
-        [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"])
-        [data-testid="stChatMessageContent"] {{
-            background: #0b6d5a;
+        .chat-row.assistant {{
+            justify-content: flex-start;
+        }}
+        .chat-text {{
+            max-width: 68%;
+            padding: .15rem .8rem;
+            background: transparent;
             border: 0;
-            border-radius: 18px 4px 18px 18px;
+            box-shadow: none;
+            font-size: 1.04rem;
+            line-height: 1.65;
+            overflow-wrap: anywhere;
+        }}
+        .chat-row.user .chat-text {{
+            color: #b9fff0;
+            border-right: 3px solid #22d3a6;
+            text-align: right;
+        }}
+        .chat-row.assistant .chat-text {{
+            color: #f2f8ff;
+            border-left: 3px solid #55cfff;
+            text-align: left;
         }}
         .credit-box {{
             margin: .35rem 0 1.4rem;
@@ -86,6 +89,15 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid4())
+
+
+def render_message(role: str, content: str) -> None:
+    """Render a compact, borderless left/right chat message."""
+    safe_content = html.escape(content).replace("\n", "<br>")
+    st.markdown(
+        f'<div class="chat-row {role}"><div class="chat-text">{safe_content}</div></div>',
+        unsafe_allow_html=True,
+    )
 
 with st.sidebar:
     st.markdown(
@@ -131,28 +143,25 @@ st.title("⚖️ LexAssist")
 st.caption("Ask about a legal topic in plain language. Include your country or state when it matters.")
 
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+    render_message(message["role"], message["content"])
 
 question = st.chat_input("For example: What should I check before signing a rental agreement?")
 
 if question:
     st.session_state.messages.append({"role": "user", "content": question})
-    with st.chat_message("user"):
-        st.markdown(question)
+    render_message("user", question)
 
-    with st.chat_message("assistant"):
-        with st.spinner("Reviewing your question…"):
-            try:
-                answer = ask(question, st.session_state.session_id)
-            except LexAssistConfigurationError as error:
-                answer = str(error)
-            except ValueError as error:
-                answer = str(error)
-            except Exception:
-                answer = (
-                    "I couldn't reach the AI service just now. Please check your connection "
-                    "and try again in a moment."
-                )
-        st.markdown(answer)
+    with st.spinner("Reviewing your question…"):
+        try:
+            answer = ask(question, st.session_state.session_id)
+        except LexAssistConfigurationError as error:
+            answer = str(error)
+        except ValueError as error:
+            answer = str(error)
+        except Exception:
+            answer = (
+                "I couldn't reach the AI service just now. Please check your connection "
+                "and try again in a moment."
+            )
+    render_message("assistant", answer)
     st.session_state.messages.append({"role": "assistant", "content": answer})
