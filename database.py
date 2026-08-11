@@ -89,15 +89,42 @@ def save_message(session_id: str, role: str, content: str) -> None:
         )
 
 
-def get_messages(session_id: str) -> list[dict[str, str]]:
+def get_messages(session_id: str) -> list[dict[str, str | int]]:
     """Return messages in the order they were sent."""
     initialize_database()
     with _connection() as connection:
         rows = connection.execute(
-            "SELECT role, content FROM messages WHERE session_id = ? ORDER BY id",
+            "SELECT id, role, content FROM messages WHERE session_id = ? ORDER BY id",
             (session_id,),
         ).fetchall()
-    return [{"role": row["role"], "content": row["content"]} for row in rows]
+    return [
+        {"id": row["id"], "role": row["role"], "content": row["content"]}
+        for row in rows
+    ]
+
+
+def update_assistant_message(session_id: str, message_id: int, content: str) -> None:
+    """Update one saved LexAssist response after a user edits it."""
+    content = content.strip()
+    if not content:
+        raise ValueError("An answer cannot be empty.")
+
+    initialize_database()
+    with _connection() as connection:
+        result = connection.execute(
+            """
+            UPDATE messages
+            SET content = ?
+            WHERE id = ? AND session_id = ? AND role = 'assistant'
+            """,
+            (content, message_id, session_id),
+        )
+        if result.rowcount != 1:
+            raise ValueError("The saved answer could not be found.")
+        connection.execute(
+            "UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE session_id = ?",
+            (session_id,),
+        )
 
 
 def list_conversations() -> list[dict[str, str]]:

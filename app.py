@@ -8,9 +8,16 @@ from pathlib import Path
 from uuid import uuid4
 
 import streamlit as st
+import streamlit.components.v1 as components
 
-from database import get_messages, initialize_database, list_conversations
+from database import (
+    get_messages,
+    initialize_database,
+    list_conversations,
+    update_assistant_message,
+)
 from model import LexAssistConfigurationError, ask, clear_session_history
+from pdf_utils import create_answer_pdf
 
 
 st.set_page_config(page_title="LexAssist | Legal Information", page_icon="⚖️", layout="wide")
@@ -99,6 +106,65 @@ def render_message(role: str, content: str) -> None:
         unsafe_allow_html=True,
     )
 
+
+def render_copy_button(content: str, message_id: int | None) -> None:
+    """Render a browser-side copy icon without sending text to the server."""
+    encoded_text = base64.b64encode(content.encode("utf-8")).decode("ascii")
+    button_id = f"copy-{message_id or 'current'}"
+    components.html(
+        f"""
+        <style>
+            body {{ margin: 0; background: transparent; }}
+            button {{
+                cursor: pointer; border: 0; border-radius: 6px; background: transparent;
+                color: #a9c2d8; font-size: 18px; padding: 3px 7px;
+            }}
+            button:hover {{ background: rgba(92, 184, 255, .16); color: #ffffff; }}
+        </style>
+        <button id="{button_id}" title="Copy answer" aria-label="Copy answer">⧉</button>
+        <script>
+            document.getElementById("{button_id}").addEventListener("click", async () => {{
+                await navigator.clipboard.writeText(atob("{encoded_text}"));
+            }});
+        </script>
+        """,
+        height=32,
+    )
+
+
+def render_answer_actions(message: dict[str, str | int]) -> None:
+    """Show copy, PDF download, and edit controls under a saved answer."""
+    content = str(message["content"])
+    message_id = message.get("id")
+    action_columns = st.columns([0.06, 0.07, 0.87])
+    with action_columns[0]:
+        render_copy_button(content, int(message_id) if message_id is not None else None)
+    with action_columns[1]:
+        with st.popover("⋮", help="Answer options"):
+            st.download_button(
+                "Download as PDF",
+                data=create_answer_pdf(content),
+                file_name="lexassist-answer.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+            )
+            if message_id is not None:
+                edited_content = st.text_area(
+                    "Edit answer",
+                    value=content,
+                    key=f"edit-answer-{message_id}",
+                    height=160,
+                )
+                if st.button("Save changes", key=f"save-answer-{message_id}"):
+                    update_assistant_message(
+                        st.session_state.session_id,
+                        int(message_id),
+                        edited_content,
+                    )
+                    clear_session_history(st.session_state.session_id)
+                    st.session_state.messages = get_messages(st.session_state.session_id)
+                    st.rerun()
+
 with st.sidebar:
     st.markdown(
         """
@@ -144,6 +210,8 @@ st.caption("Ask about a legal topic in plain language. Include your country or s
 
 for message in st.session_state.messages:
     render_message(message["role"], message["content"])
+    if message["role"] == "assistant":
+        render_answer_actions(message)
 
 question = st.chat_input("For example: What should I check before signing a rental agreement?")
 
@@ -164,4 +232,5 @@ if question:
                 "and try again in a moment."
             )
     render_message("assistant", answer)
-    st.session_state.messages.append({"role": "assistant", "content": answer})
+    st.session_state.messages = get_messages(st.session_state.session_id)
+    render_answer_actions(st.session_state.messages[-1])

@@ -2,3 +2,4 @@ streamlit>=1.40
 python-dotenv>=1.0
 langchain-core>=0.3
 langchain-mistralai>=0.2
+reportlab>=4.2
