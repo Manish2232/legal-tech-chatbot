@@ -35,9 +35,33 @@ st.markdown(
         [data-testid="stHeader"] {{ background: transparent; }}
         [data-testid="stSidebar"] {{ background: rgba(5, 15, 29, .93); }}
         [data-testid="stChatMessage"] {{
-            background: rgba(10, 28, 49, .78);
-            border: 1px solid rgba(112, 195, 255, .22);
-            border-radius: 12px;
+            align-items: flex-end;
+            background: transparent !important;
+            border: 0 !important;
+            gap: 0 !important;
+            padding: .35rem 0 !important;
+        }}
+        [data-testid="stChatMessageAvatarUser"],
+        [data-testid="stChatMessageAvatarAssistant"] {{
+            display: none !important;
+        }}
+        [data-testid="stChatMessageContent"] {{
+            width: fit-content;
+            max-width: min(72%, 720px);
+            padding: .75rem 1rem;
+            background: rgba(9, 38, 63, .94);
+            border: 1px solid rgba(112, 195, 255, .24);
+            border-radius: 4px 18px 18px 18px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
+        }}
+        [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {{
+            justify-content: flex-end;
+        }}
+        [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"])
+        [data-testid="stChatMessageContent"] {{
+            background: #0b6d5a;
+            border: 0;
+            border-radius: 18px 4px 18px 18px;
         }}
         .credit-box {{
             margin: .35rem 0 1.4rem;
