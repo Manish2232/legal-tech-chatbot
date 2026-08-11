@@ -14,10 +14,11 @@ from database import (
     get_messages,
     initialize_database,
     list_conversations,
+    delete_conversation,
     update_assistant_message,
 )
 from model import LexAssistConfigurationError, ask, clear_session_history
-from pdf_utils import create_answer_pdf
+from pdf_utils import create_answer_pdf, create_chat_report_pdf
 
 
 st.set_page_config(page_title="LexAssist | Legal Information", page_icon="⚖️", layout="wide")
@@ -124,7 +125,16 @@ def render_copy_button(content: str, message_id: int | None) -> None:
         <button id="{button_id}" title="Copy answer" aria-label="Copy answer">⧉</button>
         <script>
             document.getElementById("{button_id}").addEventListener("click", async () => {{
-                await navigator.clipboard.writeText(atob("{encoded_text}"));
+                const button = document.getElementById("{button_id}");
+                const originalIcon = button.textContent;
+                try {{
+                    await navigator.clipboard.writeText(atob("{encoded_text}"));
+                    button.textContent = "✓";
+                    setTimeout(() => {{ button.textContent = originalIcon; }}, 2500);
+                }} catch (error) {{
+                    button.textContent = "!";
+                    setTimeout(() => {{ button.textContent = originalIcon; }}, 2500);
+                }}
             }});
         </script>
         """,
@@ -185,6 +195,27 @@ with st.sidebar:
         st.session_state.messages = []
         st.session_state.session_id = str(uuid4())
         st.rerun()
+    with st.popover("⋮", help="Current chat options", use_container_width=True):
+        st.download_button(
+            "Download chat as PDF",
+            data=create_chat_report_pdf(st.session_state.messages),
+            file_name="lexassist-chat-report.pdf",
+            mime="application/pdf",
+            key=f"download-chat-{st.session_state.session_id}",
+            use_container_width=True,
+            disabled=not st.session_state.messages,
+        )
+        if st.button(
+            "Delete current chat",
+            key=f"delete-chat-{st.session_state.session_id}",
+            use_container_width=True,
+            disabled=not st.session_state.messages,
+        ):
+            delete_conversation(st.session_state.session_id)
+            clear_session_history(st.session_state.session_id)
+            st.session_state.messages = []
+            st.session_state.session_id = str(uuid4())
+            st.rerun()
     st.divider()
     st.subheader("Previous chats")
     conversations = list_conversations()

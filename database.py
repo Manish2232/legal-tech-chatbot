@@ -127,6 +127,13 @@ def update_assistant_message(session_id: str, message_id: int, content: str) -> 
         )
 
 
+def delete_conversation(session_id: str) -> None:
+    """Permanently delete one conversation and all of its saved messages."""
+    initialize_database()
+    with _connection() as connection:
+        connection.execute("DELETE FROM conversations WHERE session_id = ?", (session_id,))
+
+
 def list_conversations() -> list[dict[str, str]]:
     """Return saved chats, newest first, for the sidebar archive."""
     initialize_database()
