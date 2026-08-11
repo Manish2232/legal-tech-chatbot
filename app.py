@@ -74,6 +74,27 @@ st.markdown(
             color: #f2f8ff;
             text-align: left;
         }}
+        [data-testid="stPopover"] > button {{
+            min-width: 24px !important;
+            min-height: 24px !important;
+            width: 24px !important;
+            height: 24px !important;
+            padding: 0 !important;
+            background: transparent !important;
+            border: 0 !important;
+            border-radius: 50% !important;
+            box-shadow: none !important;
+            color: #a9c2d8 !important;
+            font-size: 18px !important;
+            line-height: 1 !important;
+        }}
+        [data-testid="stPopover"] > button:hover {{
+            background: rgba(92, 184, 255, .16) !important;
+            color: #ffffff !important;
+        }}
+        [data-testid="stPopover"] > button svg {{
+            display: none !important;
+        }}
         .credit-box {{
             margin: .35rem 0 1.4rem;
             padding: 1rem .8rem;
@@ -118,7 +139,7 @@ def render_copy_button(content: str, message_id: int | None) -> None:
             body {{ margin: 0; background: transparent; }}
             button {{
                 cursor: pointer; border: 0; border-radius: 6px; background: transparent;
-                color: #a9c2d8; font-size: 18px; padding: 3px 7px;
+                color: #a9c2d8; font-size: 15px; line-height: 1; padding: 2px 4px;
             }}
             button:hover {{ background: rgba(92, 184, 255, .16); color: #ffffff; }}
         </style>
@@ -138,7 +159,7 @@ def render_copy_button(content: str, message_id: int | None) -> None:
             }});
         </script>
         """,
-        height=32,
+        height=26,
     )
 
 
@@ -147,7 +168,7 @@ def render_answer_actions(message: dict[str, str | int]) -> None:
     content = str(message["content"])
     message_id = message.get("id")
     action_key = str(message_id) if message_id is not None else "current"
-    action_columns = st.columns([0.06, 0.07, 0.87])
+    action_columns = st.columns([0.025, 0.03, 0.945], gap="small")
     with action_columns[0]:
         render_copy_button(content, int(message_id) if message_id is not None else None)
     with action_columns[1]:
@@ -181,7 +202,7 @@ def render_answer_actions(message: dict[str, str | int]) -> None:
 def render_user_copy_action(message: dict[str, str | int]) -> None:
     """Show the copy control below a user message, aligned to the right."""
     message_id = message.get("id")
-    action_columns = st.columns([0.94, 0.06])
+    action_columns = st.columns([0.97, 0.03], gap="small")
     with action_columns[1]:
         render_copy_button(
             str(message["content"]),
