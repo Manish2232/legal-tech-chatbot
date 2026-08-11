@@ -1,203 +1,134 @@
+"""Streamlit user interface for LexAssist."""
+
+from __future__ import annotations
+
 import base64
 from pathlib import Path
+from uuid import uuid4
 
 import streamlit as st
-from dotenv import load_dotenv
-from langchain_mistralai import ChatMistralAI
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.chat_history import InMemoryChatMessageHistory
-from langchain_core.runnables.history import RunnableWithMessageHistory
 
-load_dotenv()
+from database import get_messages, initialize_database, list_conversations
+from model import LexAssistConfigurationError, ask, clear_session_history
 
-# ---------------------------------------------------------------------------
-# Original chatbot logic (unchanged)
-# ---------------------------------------------------------------------------
 
-model = ChatMistralAI(
-    model="mistral-small-2506",
-    temperature=0.7
-)
-
-prompt = ChatPromptTemplate.from_messages([
-    ("system", """
-You are LexAssist, an AI legal-information assistant.
-
-Provide clear, professional, plain-language legal information.
-You are not a lawyer and do not provide legal advice or create an attorney-client relationship.
-Use the earlier conversation when it is relevant.
-If the jurisdiction is missing and necessary, ask for it.
-End relevant answers with:
-"This is general legal information, not legal advice. Consider consulting a qualified lawyer in your jurisdiction."
-"""),
-
-    # Previous user/assistant messages will appear here
-    MessagesPlaceholder(variable_name="history"),
-
-    ("human", "{question}")
-])
-
-chain = prompt | model
-
-# Stores chat history in memory for each session ID
-chat_sessions = {}
-
-def get_session_history(session_id: str):
-    if session_id not in chat_sessions:
-        chat_sessions[session_id] = InMemoryChatMessageHistory()
-    return chat_sessions[session_id]
-
-chatbot = RunnableWithMessageHistory(
-    chain,
-    get_session_history,
-    input_messages_key="question",
-    history_messages_key="history"
-)
-
-session_id = "user_001"  # Use a unique ID per logged-in user
-
-# ---------------------------------------------------------------------------
-# Streamlit UI
-# ---------------------------------------------------------------------------
-
-st.set_page_config(page_title="LexAssist", page_icon="⚖️", layout="wide")
+st.set_page_config(page_title="LexAssist | Legal Information", page_icon="⚖️", layout="wide")
+initialize_database()
 
 BASE_DIR = Path(__file__).parent
-bg_b64 = base64.b64encode((BASE_DIR / "wallpaper.png").read_bytes()).decode()
+background_path = BASE_DIR / "wallpaper.png"
+background_css = ""
+if background_path.exists():
+    background_b64 = base64.b64encode(background_path.read_bytes()).decode()
+    background_css = f"""
+        background: linear-gradient(rgba(4, 10, 20, 0.80), rgba(4, 10, 20, 0.90)),
+                    url('data:image/png;base64,{background_b64}');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    """
 
-st.markdown(f"""
-<style>
+st.markdown(
+    f"""
+    <style>
+        .stApp {{ {background_css} background-color: #07111f; }}
+        [data-testid="stHeader"] {{ background: transparent; }}
+        [data-testid="stSidebar"] {{ background: rgba(5, 15, 29, .93); }}
+        [data-testid="stChatMessage"] {{
+            background: rgba(10, 28, 49, .78);
+            border: 1px solid rgba(112, 195, 255, .22);
+            border-radius: 12px;
+        }}
+        .credit-box {{
+            margin: .35rem 0 1.4rem;
+            padding: 1rem .8rem;
+            border: 1px solid #53e6ff;
+            border-radius: 12px;
+            background: rgba(5, 25, 43, .82);
+            box-shadow: 0 0 7px #53e6ff, 0 0 18px rgba(83, 230, 255, .85),
+                        inset 0 0 12px rgba(83, 230, 255, .18);
+            color: #edfcff;
+            font-weight: 600;
+            line-height: 1.55;
+            text-align: center;
+            text-shadow: 0 0 7px rgba(83, 230, 255, .9);
+        }}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
-/* ---------- Background ---------- */
-.stApp {{
-    background: linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.55)),
-                url("data:image/png;base64,{bg_b64}");
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
-}}
-
-/* ---------- Transparent header ---------- */
-[data-testid="stHeader"] {{
-    background: rgba(0,0,0,0);
-}}
-
-/* ---------- Sidebar ---------- */
-[data-testid="stSidebar"] {{
-    background: rgba(8, 10, 14, 0.82);
-    border-right: 1px solid rgba(90, 200, 255, 0.25);
-}}
-
-/* ---------- Neon glowing credit box ---------- */
-.neon-credit-box {{
-    border: 1px solid #4fd8ff;
-    border-radius: 12px;
-    padding: 16px 14px;
-    margin-bottom: 22px;
-    text-align: center;
-    background: rgba(10, 14, 20, 0.6);
-    box-shadow:
-        0 0 6px #4fd8ff,
-        0 0 14px #4fd8ff,
-        0 0 24px rgba(79, 216, 255, 0.6),
-        inset 0 0 10px rgba(79, 216, 255, 0.35);
-}}
-.neon-credit-box p {{
-    margin: 0;
-    color: #eafcff;
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 1.5;
-    text-shadow:
-        0 0 4px #4fd8ff,
-        0 0 10px #4fd8ff,
-        0 0 18px rgba(79, 216, 255, 0.8);
-    letter-spacing: 0.3px;
-}}
-
-/* ---------- History section ---------- */
-.history-heading {{
-    color: #cfefff;
-    font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    opacity: 0.75;
-    margin: 6px 0 10px 0;
-}}
-.history-item {{
-    background: rgba(255, 255, 255, 0.04);
-    border-left: 2px solid #4fd8ff;
-    border-radius: 4px;
-    padding: 8px 10px;
-    margin-bottom: 8px;
-    color: #e6f7ff;
-    font-size: 13px;
-    line-height: 1.4;
-    word-wrap: break-word;
-}}
-
-/* ---------- Chat area readability ---------- */
-[data-testid="stChatMessage"] {{
-    background: rgba(8, 10, 14, 0.72);
-    border-radius: 12px;
-    border: 1px solid rgba(79, 216, 255, 0.18);
-}}
-
-h1, h2, h3, p, span, label {{
-    color: #f2fbff;
-}}
-
-</style>
-""", unsafe_allow_html=True)
-
-# ---------------------------------------------------------------------------
-# Sidebar: neon credit box (top) + chat history
-# ---------------------------------------------------------------------------
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid4())
 
 with st.sidebar:
-    st.markdown("""
-    <div class="neon-credit-box">
-        <p>All credit goes to<br>Shrila Prabhupada ji<br>and<br>H.H BPBS Maharaj ji</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown('<div class="history-heading">Chat History</div>', unsafe_allow_html=True)
-
-    if "messages" not in st.session_state:
+    st.markdown(
+        """
+        <div class="credit-box">
+            All Credit goes to<br>
+            Shrila Prabhupada ji<br>
+            and Guru maharaj HH BPBS
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.title("LexAssist")
+    st.caption("Legal information, explained clearly.")
+    if st.button("Start a new chat", use_container_width=True):
+        clear_session_history(st.session_state.session_id)
         st.session_state.messages = []
-
-    if not st.session_state.messages:
-        st.markdown('<div class="history-item">No messages yet.</div>', unsafe_allow_html=True)
+        st.session_state.session_id = str(uuid4())
+        st.rerun()
+    st.divider()
+    st.subheader("Previous chats")
+    conversations = list_conversations()
+    if not conversations:
+        st.caption("Your saved chats will appear here.")
     else:
-        for msg in st.session_state.messages:
-            role_label = "You" if msg["role"] == "user" else "LexAssist"
-            st.markdown(
-                f'<div class="history-item"><b>{role_label}:</b> {msg["content"]}</div>',
-                unsafe_allow_html=True
-            )
-
-# ---------------------------------------------------------------------------
-# Main chat interface
-# ---------------------------------------------------------------------------
+        for conversation in conversations:
+            is_active = conversation["session_id"] == st.session_state.session_id
+            label = f"• {conversation['title']}" if is_active else conversation["title"]
+            if st.button(
+                label,
+                key=f"conversation-{conversation['session_id']}",
+                use_container_width=True,
+            ):
+                clear_session_history(st.session_state.session_id)
+                st.session_state.session_id = conversation["session_id"]
+                st.session_state.messages = get_messages(conversation["session_id"])
+                st.rerun()
+    st.divider()
+    st.subheader("Before you begin")
+    st.caption("LexAssist provides general information, not legal advice. Laws vary by location.")
 
 st.title("⚖️ LexAssist")
+st.caption("Ask about a legal topic in plain language. Include your country or state when it matters.")
 
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-question = st.chat_input("Ask your legal question...")
+question = st.chat_input("For example: What should I check before signing a rental agreement?")
 
 if question:
     st.session_state.messages.append({"role": "user", "content": question})
     with st.chat_message("user"):
         st.markdown(question)
 
-    response = chatbot.invoke(
-        {"question": question},
-        config={"configurable": {"session_id": session_id}}
-    )
-
-    st.session_state.messages.append({"role": "assistant", "content": response.content})
     with st.chat_message("assistant"):
-        st.markdown(response.content)
+        with st.spinner("Reviewing your question…"):
+            try:
+                answer = ask(question, st.session_state.session_id)
+            except LexAssistConfigurationError as error:
+                answer = str(error)
+            except ValueError as error:
+                answer = str(error)
+            except Exception:
+                answer = (
+                    "I couldn't reach the AI service just now. Please check your connection "
+                    "and try again in a moment."
+                )
+        st.markdown(answer)
+    st.session_state.messages.append({"role": "assistant", "content": answer})
