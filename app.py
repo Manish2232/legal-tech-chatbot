@@ -195,27 +195,6 @@ with st.sidebar:
         st.session_state.messages = []
         st.session_state.session_id = str(uuid4())
         st.rerun()
-    with st.popover("⋮", help="Current chat options", use_container_width=True):
-        st.download_button(
-            "Download chat as PDF",
-            data=create_chat_report_pdf(st.session_state.messages),
-            file_name="lexassist-chat-report.pdf",
-            mime="application/pdf",
-            key=f"download-chat-{st.session_state.session_id}",
-            use_container_width=True,
-            disabled=not st.session_state.messages,
-        )
-        if st.button(
-            "Delete current chat",
-            key=f"delete-chat-{st.session_state.session_id}",
-            use_container_width=True,
-            disabled=not st.session_state.messages,
-        ):
-            delete_conversation(st.session_state.session_id)
-            clear_session_history(st.session_state.session_id)
-            st.session_state.messages = []
-            st.session_state.session_id = str(uuid4())
-            st.rerun()
     st.divider()
     st.subheader("Previous chats")
     conversations = list_conversations()
@@ -225,15 +204,40 @@ with st.sidebar:
         for conversation in conversations:
             is_active = conversation["session_id"] == st.session_state.session_id
             label = f"• {conversation['title']}" if is_active else conversation["title"]
-            if st.button(
-                label,
-                key=f"conversation-{conversation['session_id']}",
-                use_container_width=True,
-            ):
-                clear_session_history(st.session_state.session_id)
-                st.session_state.session_id = conversation["session_id"]
-                st.session_state.messages = get_messages(conversation["session_id"])
-                st.rerun()
+            session_id = conversation["session_id"]
+            conversation_messages = get_messages(session_id)
+            chat_columns = st.columns([0.84, 0.16], gap="small")
+            with chat_columns[0]:
+                if st.button(
+                    label,
+                    key=f"conversation-{session_id}",
+                    use_container_width=True,
+                ):
+                    clear_session_history(st.session_state.session_id)
+                    st.session_state.session_id = session_id
+                    st.session_state.messages = conversation_messages
+                    st.rerun()
+            with chat_columns[1]:
+                with st.popover("⋮", help="Chat options", use_container_width=True):
+                    st.download_button(
+                        "Download chat as PDF",
+                        data=create_chat_report_pdf(conversation_messages),
+                        file_name="lexassist-chat-report.pdf",
+                        mime="application/pdf",
+                        key=f"download-chat-{session_id}",
+                        use_container_width=True,
+                    )
+                    if st.button(
+                        "Delete chat",
+                        key=f"delete-chat-{session_id}",
+                        use_container_width=True,
+                    ):
+                        delete_conversation(session_id)
+                        if is_active:
+                            clear_session_history(session_id)
+                            st.session_state.messages = []
+                            st.session_state.session_id = str(uuid4())
+                        st.rerun()
     st.divider()
     st.subheader("Before you begin")
     st.caption("LexAssist provides general information, not legal advice. Laws vary by location.")
