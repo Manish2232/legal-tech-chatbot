@@ -61,6 +61,8 @@ st.markdown(
             text-align: right;
         }}
         .chat-row.assistant .chat-text {{
+            width: 100%;
+            max-width: 100%;
             color: #f2f8ff;
             text-align: left;
         }}
