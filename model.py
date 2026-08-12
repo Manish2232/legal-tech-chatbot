@@ -127,7 +127,7 @@ def get_chatbot() -> RunnableWithMessageHistory:
     )
 
 
-def ask(question: str, session_id: str) -> str:
+def ask(question: str, session_id: str, owner_id: str | None = None) -> str:
     """Validate a question, retain bounded history, and return the assistant reply."""
     question = question.strip()
     if not question:
@@ -141,8 +141,8 @@ def ask(question: str, session_id: str) -> str:
         config={"configurable": {"session_id": session_id}},
     )
     answer = str(response.content)
-    save_message(session_id, "user", question)
-    save_message(session_id, "assistant", answer)
+    save_message(session_id, "user", question, user_id=owner_id)
+    save_message(session_id, "assistant", answer, user_id=owner_id)
     return answer
 
 
