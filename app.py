@@ -876,11 +876,7 @@ def show_auth_screen() -> None:
                         st.session_state.pending_verification_code = result.get("verification_code")
                         st.success(
                             "Account created. Check your email for a verification code."
-                            if result["email_sent"]
-                            else "Account created. Use the verification code below to continue."
                         )
-                        if result.get("verification_code"):
-                            st.info(f"Development verification code: {result['verification_code']}")
 
         if st.session_state.pending_verification_email:
             st.divider()
@@ -920,7 +916,7 @@ def show_auth_screen() -> None:
                     elif result["email_sent"]:
                         st.success("A fresh verification code has been sent.")
                     else:
-                        st.info(f"Development verification code: {result['verification_code']}")
+                        st.error("Failed to send verification code. Please check your email configuration.")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
