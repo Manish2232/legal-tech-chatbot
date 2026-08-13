@@ -56,22 +56,28 @@ def _send_verification_email(email: str, code: str) -> bool:
     sender_email = os.getenv("SMTP_FROM_EMAIL", smtp_user or "noreply@lexassist.local")
 
     if not smtp_host or not smtp_user or not smtp_password:
+        print(f"WARNING: SMTP not configured. Email verification code for {email}: {code}")
         return False
 
-    message = EmailMessage()
-    message["Subject"] = "LexAssist email verification"
-    message["From"] = sender_email
-    message["To"] = email
-    message.set_content(
-        "Your LexAssist verification code is: "
-        f"{code}\n\nUse it to complete your sign-up in the app."
-    )
+    try:
+        message = EmailMessage()
+        message["Subject"] = "LexAssist email verification"
+        message["From"] = sender_email
+        message["To"] = email
+        message.set_content(
+            "Your LexAssist verification code is: "
+            f"{code}\n\nUse it to complete your sign-up in the app."
+        )
 
-    with smtplib.SMTP(smtp_host, smtp_port) as server:
-        server.starttls()
-        server.login(smtp_user, smtp_password)
-        server.send_message(message)
-    return True
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(message)
+        return True
+    except Exception as e:
+        print(f"ERROR: Failed to send verification email to {email}: {e}")
+        print(f"Fallback verification code for {email}: {code}")
+        return False
 
 
 def initialize_database() -> None:
@@ -320,22 +326,28 @@ def _send_reset_email(email: str, code: str) -> bool:
     sender_email = os.getenv("SMTP_FROM_EMAIL", smtp_user or "noreply@lexassist.local")
 
     if not smtp_host or not smtp_user or not smtp_password:
+        print(f"WARNING: SMTP not configured. Email reset code for {email}: {code}")
         return False
 
-    message = EmailMessage()
-    message["Subject"] = "LexAssist password reset"
-    message["From"] = sender_email
-    message["To"] = email
-    message.set_content(
-        "Your LexAssist password reset code is: "
-        f"{code}\n\nUse it to set a new password in the app."
-    )
+    try:
+        message = EmailMessage()
+        message["Subject"] = "LexAssist password reset"
+        message["From"] = sender_email
+        message["To"] = email
+        message.set_content(
+            "Your LexAssist password reset code is: "
+            f"{code}\n\nUse it to set a new password in the app."
+        )
 
-    with smtplib.SMTP(smtp_host, smtp_port) as server:
-        server.starttls()
-        server.login(smtp_user, smtp_password)
-        server.send_message(message)
-    return True
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(message)
+        return True
+    except Exception as e:
+        print(f"ERROR: Failed to send reset email to {email}: {e}")
+        print(f"Fallback reset code for {email}: {code}")
+        return False
 
 
 def reset_password(email: str, code: str, new_password: str) -> None:
