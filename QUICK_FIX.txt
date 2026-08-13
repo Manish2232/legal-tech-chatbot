@@ -1,0 +1,19 @@
+# QUICK FIX - 3 STEPS
+
+## 1️⃣  Sign up at Mailtrap (1 min)
+   https://mailtrap.io → Click "Sign up"
+
+## 2️⃣  Get your SMTP details
+   - Integrations → SMTP
+   - Copy Username and Password
+
+## 3️⃣  Paste into .env file
+   Edit `.env` and update these lines:
+   
+   SMTP_USER = "your-copied-username"
+   SMTP_PASSWORD = "your-copied-password"
+
+## ✅ Done!
+   - Run: python test_email_config.py
+   - You should see: ✅ Your email configuration is working!
+   - Restart your app and signup will now get OTPs
