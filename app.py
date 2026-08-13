@@ -875,12 +875,9 @@ def show_auth_screen() -> None:
                         st.session_state.pending_verification_email = result["email"]
                         st.session_state.pending_verification_code = result.get("verification_code")
                         st.success("Account created successfully!")
-                        if result.get("email_sent"):
-                            st.info("Check your email for a verification code.")
-                        else:
-                            st.warning("Email could not be sent. Use the verification code below:")
-                            st.code(result.get("verification_code"), language=None)
-                            st.info("Paste this code in the verification field below to complete your sign-up.")
+                        st.info("Your verification code is:")
+                        st.code(result.get("verification_code"), language=None)
+                        st.info("👇 Enter this code below to verify your email and complete sign-up")
 
         if st.session_state.pending_verification_email:
             st.divider()
@@ -917,11 +914,8 @@ def show_auth_screen() -> None:
                     result, error_message = run_with_loader("Sending a new code…", "", _do_resend)
                     if error_message:
                         st.error(error_message)
-                    elif result["email_sent"]:
-                        st.success("A fresh verification code has been sent.")
-                        st.session_state.pending_verification_code = None
                     else:
-                        st.warning("Email could not be sent. Use the verification code below:")
+                        st.success("A new verification code has been generated!")
                         st.code(result.get("verification_code"), language=None)
                         st.session_state.pending_verification_code = result.get("verification_code")
 
